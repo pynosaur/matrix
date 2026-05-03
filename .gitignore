@@ -1,0 +1,9 @@
+__pycache__/
+bazel-*
+MODULE.bazel.lock
+
+# Nuitka build artifacts
+main.dist/
+main.build/
+main.onefile-build/
+*-darwin-arm64

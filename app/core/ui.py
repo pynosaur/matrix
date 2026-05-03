@@ -1,0 +1,133 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# Author: @spacemany2k38
+# 2026-05-03
+
+"""Curses-based renderer for the Matrix rain."""
+
+import curses
+import time
+
+
+def _init_colors():
+    """Set up color pairs for depth-based green shading."""
+    curses.start_color()
+    curses.use_default_colors()
+
+    if curses.can_change_color() and curses.COLORS >= 256:
+        # Use 256-color palette for rich greens
+        # Pair 1: bright head (white-green glow)
+        curses.init_pair(1, 15, -1)       # bright white head
+        # Pair 2: bright green (near head)
+        curses.init_pair(2, 46, -1)       # vivid green
+        # Pair 3: medium green
+        curses.init_pair(3, 40, -1)       # green
+        # Pair 4: dim green
+        curses.init_pair(4, 34, -1)       # darker green
+        # Pair 5: very dim green (tail)
+        curses.init_pair(5, 22, -1)       # very dark green
+        # Pair 6: near-black (fading out)
+        curses.init_pair(6, 236, -1)      # almost gone
+
+        # Dim depth variants (background columns)
+        # Pair 7: dim bright
+        curses.init_pair(7, 28, -1)
+        # Pair 8: dim medium
+        curses.init_pair(8, 22, -1)
+        # Pair 9: dim dark
+        curses.init_pair(9, 236, -1)
+    else:
+        # Fallback: basic 8-color
+        curses.init_pair(1, curses.COLOR_WHITE, -1)
+        curses.init_pair(2, curses.COLOR_GREEN, -1)
+        curses.init_pair(3, curses.COLOR_GREEN, -1)
+        curses.init_pair(4, curses.COLOR_GREEN, -1)
+        curses.init_pair(5, curses.COLOR_GREEN, -1)
+        curses.init_pair(6, curses.COLOR_GREEN, -1)
+        curses.init_pair(7, curses.COLOR_GREEN, -1)
+        curses.init_pair(8, curses.COLOR_GREEN, -1)
+        curses.init_pair(9, curses.COLOR_GREEN, -1)
+
+
+def _pick_color(brightness, depth, is_head):
+    """Choose color pair + attributes based on brightness and depth."""
+    if is_head:
+        # Leading character: bright white glow
+        if depth > 0.6:
+            return curses.color_pair(1) | curses.A_BOLD
+        else:
+            return curses.color_pair(2) | curses.A_BOLD
+
+    if depth >= 0.7:
+        # Foreground stream — full brightness range
+        if brightness > 0.85:
+            return curses.color_pair(2) | curses.A_BOLD
+        elif brightness > 0.65:
+            return curses.color_pair(2)
+        elif brightness > 0.45:
+            return curses.color_pair(3)
+        elif brightness > 0.25:
+            return curses.color_pair(4)
+        elif brightness > 0.10:
+            return curses.color_pair(5)
+        else:
+            return curses.color_pair(6)
+    else:
+        # Background stream — dim, adds depth
+        if brightness > 0.6:
+            return curses.color_pair(7)
+        elif brightness > 0.3:
+            return curses.color_pair(8)
+        else:
+            return curses.color_pair(9)
+
+
+def run_rain(stdscr, rain):
+    """Main render loop."""
+    curses.curs_set(0)         # hide cursor
+    stdscr.nodelay(True)       # non-blocking getch
+    stdscr.timeout(33)         # ~30 fps
+
+    _init_colors()
+    stdscr.bkgd(' ', curses.color_pair(0))
+
+    target_fps = 30
+    frame_time = 1.0 / target_fps
+
+    while True:
+        t0 = time.monotonic()
+
+        key = stdscr.getch()
+        if key in (ord('q'), ord('Q'), 27):  # q, Q, Esc
+            break
+
+        # Handle resize
+        rows, cols = stdscr.getmaxyx()
+        rain.resize(rows, cols)
+
+        # Advance simulation
+        rain.tick()
+
+        # Render
+        stdscr.erase()
+
+        for stream in rain.streams:
+            for idx, (row, ch, brightness) in enumerate(
+                stream.visible_cells(rows)
+            ):
+                if stream.col >= cols:
+                    continue
+                is_head = (idx == 0)
+                attr = _pick_color(brightness, stream.depth, is_head)
+                try:
+                    stdscr.addstr(row, stream.col, ch, attr)
+                except curses.error:
+                    pass  # bottom-right corner write is expected to fail
+
+        stdscr.refresh()
+
+        # Frame rate limiting
+        elapsed = time.monotonic() - t0
+        sleep_time = frame_time - elapsed
+        if sleep_time > 0:
+            time.sleep(sleep_time)

@@ -1,0 +1,23 @@
+NAME: matrix
+FULL_NAME: "Matrix Digital Rain"
+VERSION: "0.1.0"
+DESCRIPTION: >
+  Matrix digital rain effect for your terminal. Renders authentic falling
+  character streams with half-width katakana, depth layers, character mutation,
+  variable speeds, and bright head glow. Pure Python, stdlib only.
+USAGE:
+  - "matrix"
+  - "matrix -h"
+  - "matrix -v"
+OPTIONS:
+  - "-h, --help              Show help message"
+  - "-v, --version           Show version information"
+EXAMPLES:
+  - "matrix                # Start the digital rain"
+KEYBINDINGS:
+  - "q / Q / Esc = quit"
+OUTPUT: >
+  Full-screen curses TUI rendering the Matrix digital rain effect with 256-color
+  green gradient. Falls back gracefully to 8-color terminals.
+AUTHOR: "@spacemany2k38"
+DATE: "2026-05-03"
