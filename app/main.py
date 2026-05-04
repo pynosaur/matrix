@@ -58,26 +58,21 @@ def main():
         return 0
 
     if args and args[0] == "--self":
-        # Read own source code and use it as the message
-        # Nuitka onefile: __file__ = /tmp/nuitka-matrix/main.py
-        #   .parent = /tmp/nuitka-matrix/ → _src/ lives here
-        # Dev: __file__ = .../matrix/app/main.py
-        #   .parent = .../matrix/app/ → the source dir itself
+        # Read core/rain.py source — the rain engine
         base = Path(__file__).resolve().parent
         src_dir = base / "_src"  # Nuitka bundled source
         if not src_dir.is_dir():
-            src_dir = base  # dev fallback: app/ is the source dir
+            src_dir = base / "core"  # dev fallback
+        src_file = src_dir / "rain.py"
+        if not src_file.is_file():
+            # flat Nuitka layout
+            src_file = src_dir / "rain.py"
         try:
-            parts = []
-            for py in sorted(src_dir.rglob("*.py")):
-                parts.append(f"# ── {py.relative_to(src_dir)} ──")
-                parts.append(py.read_text(errors='replace'))
-            message = "\n".join(parts) if parts else "matrix"
+            message = src_file.read_text(errors='replace')
         except OSError as e:
             print(f"matrix: {e}", file=sys.stderr)
             return 1
         args = args[1:]
-        # Fall through to rain with source as message
 
     else:
         # Parse flags
