@@ -57,9 +57,14 @@ def image_to_grid(filepath, target_rows, target_cols):
 def _load_pixels(filepath, width, height):
     """Load image as grayscale pixel array (0.0–1.0), resized to width x height.
 
-    Uses macOS sips (built-in), ImageMagick, or direct PPM/PGM parsing.
-    Pure Python — no external libraries.
+    Pure Python PNG decoder first (works everywhere), then platform fallbacks.
     """
+    # Try pure Python PNG decoder (universal, no deps)
+    if filepath.lower().endswith('.png'):
+        pixels = _read_png(filepath, width, height)
+        if pixels is not None:
+            return pixels
+
     # Try macOS sips
     pixels = _try_sips(filepath, width, height)
     if pixels is not None:
@@ -75,6 +80,181 @@ def _load_pixels(filepath, width, height):
         return _read_pnm(filepath, width, height)
 
     return None
+
+
+def _read_png(filepath, target_w, target_h):
+    """Pure Python PNG reader. Handles 8-bit RGB, RGBA, grayscale, gray+alpha.
+
+    Uses only stdlib: struct and zlib.
+    """
+    import zlib
+
+    try:
+        with open(filepath, 'rb') as f:
+            # Validate PNG signature
+            sig = f.read(8)
+            if sig != b'\x89PNG\r\n\x1a\n':
+                return None
+
+            # Parse chunks
+            img_width = img_height = bit_depth = color_type = 0
+            raw_data = b''
+            palette = None
+
+            while True:
+                chunk_header = f.read(8)
+                if len(chunk_header) < 8:
+                    break
+                length = struct.unpack('>I', chunk_header[:4])[0]
+                chunk_type = chunk_header[4:8]
+                chunk_data = f.read(length)
+                f.read(4)  # CRC
+
+                if chunk_type == b'IHDR':
+                    img_width = struct.unpack('>I', chunk_data[0:4])[0]
+                    img_height = struct.unpack('>I', chunk_data[4:8])[0]
+                    bit_depth = chunk_data[8]
+                    color_type = chunk_data[9]
+                elif chunk_type == b'PLTE':
+                    palette = chunk_data
+                elif chunk_type == b'IDAT':
+                    raw_data += chunk_data
+                elif chunk_type == b'IEND':
+                    break
+
+            if img_width == 0 or img_height == 0:
+                return None
+
+            # Only support 8-bit depth
+            if bit_depth != 8:
+                return None
+
+            # Decompress
+            decompressed = zlib.decompress(raw_data)
+
+            # Determine bytes per pixel
+            if color_type == 0:      # Grayscale
+                bpp = 1
+            elif color_type == 2:    # RGB
+                bpp = 3
+            elif color_type == 3:    # Indexed (palette)
+                bpp = 1
+            elif color_type == 4:    # Grayscale + Alpha
+                bpp = 2
+            elif color_type == 6:    # RGBA
+                bpp = 4
+            else:
+                return None
+
+            stride = img_width * bpp
+
+            # Reconstruct scanlines with PNG filtering
+            pixels_raw = []
+            prev_row = b'\x00' * stride
+            pos = 0
+
+            for y in range(img_height):
+                if pos >= len(decompressed):
+                    break
+                filter_type = decompressed[pos]
+                pos += 1
+                row_data = bytearray(decompressed[pos:pos + stride])
+                pos += stride
+
+                # Apply filter
+                if filter_type == 1:    # Sub
+                    for i in range(bpp, stride):
+                        row_data[i] = (row_data[i] + row_data[i - bpp]) & 0xFF
+                elif filter_type == 2:  # Up
+                    for i in range(stride):
+                        row_data[i] = (row_data[i] + prev_row[i]) & 0xFF
+                elif filter_type == 3:  # Average
+                    for i in range(stride):
+                        left = row_data[i - bpp] if i >= bpp else 0
+                        up = prev_row[i]
+                        row_data[i] = (row_data[i] + (left + up) // 2) & 0xFF
+                elif filter_type == 4:  # Paeth
+                    for i in range(stride):
+                        left = row_data[i - bpp] if i >= bpp else 0
+                        up = prev_row[i]
+                        up_left = prev_row[i - bpp] if i >= bpp else 0
+                        row_data[i] = (row_data[i] + _paeth(left, up, up_left)) & 0xFF
+                # filter_type 0 = None, no action
+
+                prev_row = bytes(row_data)
+
+                # Convert row to grayscale floats
+                gray_row = []
+                for x in range(img_width):
+                    offset = x * bpp
+                    if color_type == 0:       # Grayscale
+                        gray_row.append(row_data[offset] / 255.0)
+                    elif color_type == 2:     # RGB
+                        r, g, b = row_data[offset], row_data[offset+1], row_data[offset+2]
+                        gray_row.append((0.299*r + 0.587*g + 0.114*b) / 255.0)
+                    elif color_type == 3:     # Indexed
+                        idx = row_data[offset]
+                        if palette and idx * 3 + 2 < len(palette):
+                            r = palette[idx * 3]
+                            g = palette[idx * 3 + 1]
+                            b = palette[idx * 3 + 2]
+                            gray_row.append((0.299*r + 0.587*g + 0.114*b) / 255.0)
+                        else:
+                            gray_row.append(0.0)
+                    elif color_type == 4:     # Gray + Alpha
+                        gray_row.append(row_data[offset] / 255.0)
+                    elif color_type == 6:     # RGBA
+                        r, g, b = row_data[offset], row_data[offset+1], row_data[offset+2]
+                        a = row_data[offset+3]
+                        lum = (0.299*r + 0.587*g + 0.114*b) / 255.0
+                        # Premultiply alpha (transparent = black)
+                        gray_row.append(lum * (a / 255.0))
+                    else:
+                        gray_row.append(0.0)
+
+                pixels_raw.append(gray_row)
+
+            # Nearest-neighbor resize to target dimensions
+            return _resize_grid(pixels_raw, img_width, img_height, target_w, target_h)
+
+    except (OSError, zlib.error, struct.error, IndexError, ValueError):
+        return None
+
+
+def _paeth(a, b, c):
+    """Paeth predictor for PNG filtering."""
+    p = a + b - c
+    pa = abs(p - a)
+    pb = abs(p - b)
+    pc = abs(p - c)
+    if pa <= pb and pa <= pc:
+        return a
+    elif pb <= pc:
+        return b
+    return c
+
+
+def _resize_grid(pixels, src_w, src_h, dst_w, dst_h):
+    """Nearest-neighbor resize of a 2D grayscale grid.
+
+    Accounts for terminal character aspect ratio (~2:1).
+    """
+    if not pixels or src_w == 0 or src_h == 0:
+        return None
+
+    # Terminal chars are ~2x taller than wide, so sample more rows
+    effective_src_h = src_h
+    result = []
+    for y in range(dst_h):
+        src_y = int(y * effective_src_h / dst_h)
+        src_y = min(src_y, len(pixels) - 1)
+        row = []
+        for x in range(dst_w):
+            src_x = int(x * src_w / dst_w)
+            src_x = min(src_x, len(pixels[src_y]) - 1)
+            row.append(pixels[src_y][src_x])
+        result.append(row)
+    return result
 
 
 def _try_sips(filepath, width, height):
