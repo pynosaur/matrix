@@ -7,7 +7,6 @@
 
 import curses
 import subprocess
-import threading
 import time
 
 from app.core.effects import EFFECT_KEYS, create_effect
@@ -108,7 +107,7 @@ def _pick_color(brightness, depth, is_head):
 
 
 def _hide_titlebar():
-    """Hide the Terminal window title bar and toolbar on launch."""
+    """Hide the Terminal window title bar text on launch."""
     script = (
         'tell application "Terminal"\n'
         '  set myWindow to front window\n'
@@ -119,15 +118,17 @@ def _hide_titlebar():
         '  set title displays window size of myWindow to false\n'
         '  set title displays file name of myWindow to false\n'
         '  set title displays custom title of myWindow to false\n'
+        '  set title displays settings name of myWindow to false\n'
         'end tell'
     )
     try:
-        subprocess.Popen(
+        subprocess.run(
             ['osascript', '-e', script],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
+            timeout=3,
         )
-    except OSError:
+    except (OSError, subprocess.TimeoutExpired):
         pass
 
 
@@ -141,6 +142,39 @@ def _restore_titlebar():
         '  set title displays shell path of myWindow to true\n'
         '  set title displays window size of myWindow to true\n'
         '  set title displays custom title of myWindow to true\n'
+        '  set title displays settings name of myWindow to true\n'
+        'end tell'
+    )
+    try:
+        subprocess.run(
+            ['osascript', '-e', script],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=3,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+
+
+def _toggle_fullscreen():
+    """Toggle macOS native fullscreen."""
+    try:
+        subprocess.Popen(
+            ['osascript', '-e',
+             'tell application "System Events" to '
+             'keystroke "f" using {control down, command down}'],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    except OSError:
+        pass
+
+
+def _bring_to_front():
+    """Bring Terminal window to front once without stealing keyboard focus."""
+    script = (
+        'tell application "System Events"\n'
+        '  set frontmost of process "Terminal" to true\n'
         'end tell'
     )
     try:
@@ -151,36 +185,6 @@ def _restore_titlebar():
         )
     except OSError:
         pass
-
-
-_on_top_stop = threading.Event()
-
-
-def _start_on_top():
-    """Spawn a daemon thread that periodically raises Terminal to front."""
-    _on_top_stop.clear()
-
-    def _keep_on_top():
-        while not _on_top_stop.is_set():
-            try:
-                subprocess.run(
-                    ['osascript', '-e',
-                     'tell application "Terminal" to activate'],
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                    timeout=2,
-                )
-            except (OSError, subprocess.TimeoutExpired):
-                pass
-            _on_top_stop.wait(0.5)
-
-    t = threading.Thread(target=_keep_on_top, daemon=True)
-    t.start()
-
-
-def _stop_on_top():
-    """Stop the always-on-top background thread."""
-    _on_top_stop.set()
 
 
 def run_rain(stdscr, rain):
@@ -198,27 +202,26 @@ def run_rain(stdscr, rain):
     target_fps = 30
     frame_time = 1.0 / target_fps
     effects = []  # active effects list
-    is_on_top = False
+    is_fullscreen = False
 
     while True:
         t0 = time.monotonic()
 
         key = stdscr.getch()
         if key in (ord('q'), ord('Q'), 27):  # q, Q, Esc
-            if is_on_top:
-                _stop_on_top()
+            if is_fullscreen:
+                _toggle_fullscreen()
             _restore_titlebar()
             break
 
         # Trigger effects from keypresses
         if key != -1:
             ch = chr(key) if 0 <= key < 256 else ''
-            if ch == 'h':
-                is_on_top = not is_on_top
-                if is_on_top:
-                    _start_on_top()
-                else:
-                    _stop_on_top()
+            if ch == 'f':
+                _toggle_fullscreen()
+                is_fullscreen = not is_fullscreen
+            elif ch == 'h':
+                _bring_to_front()
             elif ch == 'r':
                 rain.toggle_direction()
             elif ch in EFFECT_KEYS:
