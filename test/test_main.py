@@ -131,9 +131,9 @@ class TestMessageInjector(unittest.TestCase):
     def test_produces_cells(self):
         inj = MessageInjector("wake up")
         inj._cooldown = 0
-        # Run enough ticks for appear delays to expire
+        # Run enough ticks for chars to fall into view
         cells = []
-        for _ in range(30):
+        for _ in range(50):
             cells = inj.tick(24, 80)
             if cells:
                 break
@@ -142,9 +142,8 @@ class TestMessageInjector(unittest.TestCase):
     def test_cells_have_phases(self):
         inj = MessageInjector("test")
         inj._cooldown = 0
-        # Run enough ticks for cells to appear
         cells = []
-        for _ in range(30):
+        for _ in range(50):
             cells = inj.tick(24, 80)
             if cells:
                 break

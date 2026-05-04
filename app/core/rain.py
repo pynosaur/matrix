@@ -75,28 +75,28 @@ class Stream:
 class MessageInjector:
     """Injects words from a message into the rain.
 
-    Words materialize character by character — each letter emerges from
-    the rain at its position, glows bright, holds, then dissolves back.
-    The timing is staggered and irregular, like someone reading them out
-    of the cascade.
+    Each character drips down its column to land at the target row,
+    shimmers while visible (mutating between the real char and random glyphs),
+    then washes away downward. Letters arrive at staggered, irregular intervals
+    so the word resolves organically from the cascade.
     """
 
     def __init__(self, text):
         self.words = [w for w in text.split() if w]
         self.word_idx = 0
         self._cooldown = random.randint(20, 50)
-        self._active = []  # (row, col, char, ttl, appear_delay)
+        # Each cell: {row, col, target_row, char, state, timer, shimmer}
+        self._cells = []
 
     def tick(self, rows, cols):
         """Advance one frame. Returns list of (row, col, char, phase)."""
-        # Age active cells
-        new_active = []
-        for row, col, ch, ttl, delay in self._active:
-            if delay > 0:
-                new_active.append((row, col, ch, ttl, delay - 1))
-            elif ttl > 0:
-                new_active.append((row, col, ch, ttl - 1, 0))
-        self._active = new_active
+        # Advance existing cells
+        new_cells = []
+        for cell in self._cells:
+            self._advance_cell(cell, rows)
+            if cell['state'] != 'dead':
+                new_cells.append(cell)
+        self._cells = new_cells
 
         # Cool down between words
         if self._cooldown > 0:
@@ -114,31 +114,96 @@ class MessageInjector:
                 max_col = 0
 
             col = random.randint(0, max(0, max_col))
-            row = random.randint(3, max(3, rows - 4))
+            target_row = random.randint(4, max(4, rows - 5))
 
-            # Stagger each character with irregular delays
             for i, ch in enumerate(word):
-                # Each char appears with a slightly random delay
-                delay = i * random.randint(2, 5) + random.randint(0, 3)
-                ttl = random.randint(50, 75)
-                self._active.append((row, col + i, ch, ttl, delay))
+                # Each char starts above screen and falls to target
+                start_delay = i * random.randint(3, 7) + random.randint(0, 5)
+                cell = {
+                    'row': random.randint(-8, -1),  # start above
+                    'col': col + i,
+                    'target_row': target_row,
+                    'char': ch,
+                    'state': 'falling',
+                    'timer': 0,
+                    'delay': start_delay,
+                    'hold_time': random.randint(55, 85),
+                    'fall_speed': random.uniform(0.6, 1.4),
+                    'fall_acc': 0.0,
+                    'shimmer_rate': random.uniform(0.08, 0.2),
+                }
+                self._cells.append(cell)
 
-            self._cooldown = random.randint(35, 90)
+            self._cooldown = random.randint(40, 100)
 
         return self._get_cells()
+
+    def _advance_cell(self, cell, rows):
+        """Advance a single character cell through its lifecycle."""
+        if cell['delay'] > 0:
+            cell['delay'] -= 1
+            return
+
+        state = cell['state']
+
+        if state == 'falling':
+            # Drip down toward target row
+            cell['fall_acc'] += cell['fall_speed']
+            while cell['fall_acc'] >= 1.0:
+                cell['fall_acc'] -= 1.0
+                cell['row'] += 1
+            if cell['row'] >= cell['target_row']:
+                cell['row'] = cell['target_row']
+                cell['state'] = 'lock'
+                cell['timer'] = cell['hold_time']
+
+        elif state == 'lock':
+            # Character is in place — shimmer occasionally
+            cell['timer'] -= 1
+            if cell['timer'] <= 0:
+                cell['state'] = 'wash'
+                cell['timer'] = 0
+
+        elif state == 'wash':
+            # Wash away downward
+            cell['timer'] += 1
+            cell['row'] += 1
+            if cell['row'] >= rows:
+                cell['state'] = 'dead'
 
     def _get_cells(self):
         """Return renderable cells with phase info."""
         cells = []
-        for row, col, ch, ttl, delay in self._active:
-            if delay > 0:
-                continue  # not yet visible
-            if ttl > 40:
+        for cell in self._cells:
+            if cell['delay'] > 0:
+                continue
+            if cell['state'] == 'dead':
+                continue
+
+            row = cell['row']
+            col = cell['col']
+            ch = cell['char']
+
+            if cell['state'] == 'falling':
+                # While falling, show random chars (it's still in the rain)
+                if random.random() < 0.6:
+                    ch = random_char()
                 phase = "glow"
-            elif ttl > 12:
-                phase = "hold"
-            else:
+            elif cell['state'] == 'lock':
+                # Shimmer: occasionally show a random char then snap back
+                if random.random() < cell['shimmer_rate']:
+                    ch = random_char()
+                # Phase based on timer
+                if cell['timer'] > cell['hold_time'] * 0.6:
+                    phase = "glow"
+                else:
+                    phase = "hold"
+            else:  # wash
+                # Fading out, show random chars more often
+                if random.random() < 0.4 + cell['timer'] * 0.05:
+                    ch = random_char()
                 phase = "fade"
+
             cells.append((row, col, ch, phase))
         return cells
 
