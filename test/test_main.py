@@ -130,14 +130,24 @@ class TestMessageInjector(unittest.TestCase):
 
     def test_produces_cells(self):
         inj = MessageInjector("wake up")
-        inj._cooldown = 0  # skip cooldown for testing
-        cells = inj.tick(24, 80)
+        inj._cooldown = 0
+        # Run enough ticks for appear delays to expire
+        cells = []
+        for _ in range(30):
+            cells = inj.tick(24, 80)
+            if cells:
+                break
         self.assertGreater(len(cells), 0)
 
     def test_cells_have_phases(self):
         inj = MessageInjector("test")
         inj._cooldown = 0
-        cells = inj.tick(24, 80)
+        # Run enough ticks for cells to appear
+        cells = []
+        for _ in range(30):
+            cells = inj.tick(24, 80)
+            if cells:
+                break
         for row, col, ch, phase in cells:
             self.assertIn(phase, ("glow", "hold", "fade"))
 
