@@ -129,13 +129,10 @@ def run_rain(stdscr, rain):
     _init_colors()
     stdscr.bkgd(' ', curses.color_pair(0))
 
-    # Enter native fullscreen on launch
-    _toggle_fullscreen()
-
     target_fps = 30
     frame_time = 1.0 / target_fps
     effects = []  # active effects list
-    is_fullscreen = True
+    is_fullscreen = False
 
     while True:
         t0 = time.monotonic()
