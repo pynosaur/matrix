@@ -72,14 +72,88 @@ class Stream:
                 yield row, self.chars[i], bright
 
 
+class MessageInjector:
+    """Injects words from a message into the rain, one at a time.
+
+    Words appear horizontally at random positions, glowing bright white
+    then fading back into the cascade — like reading the Matrix.
+    """
+
+    def __init__(self, text):
+        # Split into words, filter empty
+        self.words = [w for w in text.split() if w]
+        self.word_idx = 0
+        self._cooldown = 30          # frames before first word
+        self._active = []            # list of (row, col, char, ttl)
+        self._placing = False
+
+    def tick(self, rows, cols):
+        """Advance one frame. Returns list of (row, col, char, phase).
+
+        phase: 'glow' (appearing), 'hold' (readable), 'fade' (dissolving)
+        """
+        # Age active cells
+        new_active = []
+        for row, col, ch, ttl in self._active:
+            if ttl > 0:
+                new_active.append((row, col, ch, ttl - 1))
+        self._active = new_active
+
+        # Cool down between words
+        if self._cooldown > 0:
+            self._cooldown -= 1
+            return self._get_cells()
+
+        # Place next word
+        if not self._placing and self.words:
+            word = self.words[self.word_idx % len(self.words)]
+            self.word_idx += 1
+
+            # Pick a random position that fits
+            max_col = cols - len(word)
+            if max_col < 0:
+                word = word[:cols]
+                max_col = 0
+
+            col = random.randint(0, max(0, max_col))
+            row = random.randint(2, max(2, rows - 3))
+
+            # Place each character with staggered TTL so they appear
+            # left to right then fade together
+            for i, ch in enumerate(word):
+                # TTL: appear delay + hold time + fade time
+                # Higher TTL = visible longer
+                ttl = 60 + (len(word) - i) * 2
+                self._active.append((row, col + i, ch, ttl))
+
+            # Cooldown scales with word length — longer pause between words
+            self._cooldown = random.randint(40, 80)
+
+        return self._get_cells()
+
+    def _get_cells(self):
+        """Return renderable cells with phase info."""
+        cells = []
+        for row, col, ch, ttl in self._active:
+            if ttl > 45:
+                phase = "glow"      # appearing, bright white
+            elif ttl > 15:
+                phase = "hold"      # readable, vivid green
+            else:
+                phase = "fade"      # dissolving back into rain
+            cells.append((row, col, ch, phase))
+        return cells
+
+
 class Rain:
     """The full Matrix rain simulation across the terminal."""
 
-    def __init__(self, rows, cols):
+    def __init__(self, rows, cols, message=None):
         self.rows = rows
         self.cols = cols
         self.streams = []
         self._spawn_cooldowns = {}  # col -> ticks until next spawn allowed
+        self.injector = MessageInjector(message) if message else None
 
     def resize(self, rows, cols):
         self.rows = rows
@@ -109,3 +183,9 @@ class Rain:
                 s = Stream(col, self.rows, depth)
                 self.streams.append(s)
                 self._spawn_cooldowns[col] = random.randint(5, 25)
+
+    def tick_messages(self):
+        """Advance message injector; returns cell list or empty."""
+        if self.injector:
+            return self.injector.tick(self.rows, self.cols)
+        return []

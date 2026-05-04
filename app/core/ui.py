@@ -36,6 +36,14 @@ def _init_colors():
         curses.init_pair(8, 22, -1)
         # Pair 9: dim dark
         curses.init_pair(9, 236, -1)
+
+        # Message injection colors
+        # Pair 10: message glow (bright white)
+        curses.init_pair(10, 15, -1)
+        # Pair 11: message hold (vivid green, readable)
+        curses.init_pair(11, 46, -1)
+        # Pair 12: message fade (dimming out)
+        curses.init_pair(12, 34, -1)
     else:
         # Fallback: basic 8-color
         curses.init_pair(1, curses.COLOR_WHITE, -1)
@@ -47,6 +55,19 @@ def _init_colors():
         curses.init_pair(7, curses.COLOR_GREEN, -1)
         curses.init_pair(8, curses.COLOR_GREEN, -1)
         curses.init_pair(9, curses.COLOR_GREEN, -1)
+        curses.init_pair(10, curses.COLOR_WHITE, -1)
+        curses.init_pair(11, curses.COLOR_GREEN, -1)
+        curses.init_pair(12, curses.COLOR_GREEN, -1)
+
+
+def _pick_msg_color(phase):
+    """Choose color for injected message characters."""
+    if phase == "glow":
+        return curses.color_pair(10) | curses.A_BOLD
+    elif phase == "hold":
+        return curses.color_pair(11) | curses.A_BOLD
+    else:  # fade
+        return curses.color_pair(12)
 
 
 def _pick_color(brightness, depth, is_head):
@@ -107,9 +128,16 @@ def run_rain(stdscr, rain):
 
         # Advance simulation
         rain.tick()
+        msg_cells = rain.tick_messages()
 
         # Render
         stdscr.erase()
+
+        # Build a set of message cell positions so rain doesn't overwrite them
+        msg_positions = set()
+        for row, col, ch, phase in msg_cells:
+            if 0 <= row < rows and 0 <= col < cols:
+                msg_positions.add((row, col))
 
         for stream in rain.streams:
             for idx, (row, ch, brightness) in enumerate(
@@ -117,12 +145,23 @@ def run_rain(stdscr, rain):
             ):
                 if stream.col >= cols:
                     continue
+                if (row, stream.col) in msg_positions:
+                    continue  # message takes priority
                 is_head = (idx == 0)
                 attr = _pick_color(brightness, stream.depth, is_head)
                 try:
                     stdscr.addstr(row, stream.col, ch, attr)
                 except curses.error:
                     pass  # bottom-right corner write is expected to fail
+
+        # Render message cells on top
+        for row, col, ch, phase in msg_cells:
+            if 0 <= row < rows and 0 <= col < cols:
+                attr = _pick_msg_color(phase)
+                try:
+                    stdscr.addstr(row, col, ch, attr)
+                except curses.error:
+                    pass
 
         stdscr.refresh()
 

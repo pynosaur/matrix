@@ -9,7 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.core.rain import Rain, Stream, random_char, CHARSET
+from app.core.rain import Rain, Stream, random_char, CHARSET, MessageInjector
 
 
 class TestRandomChar(unittest.TestCase):
@@ -96,6 +96,50 @@ class TestRain(unittest.TestCase):
         # Dead stream should have been removed (or new ones spawned)
         dead = [st for st in r.streams if st is s]
         self.assertEqual(len(dead), 0)
+
+    def test_message_rain(self):
+        r = Rain(24, 80, message="hello world")
+        self.assertIsNotNone(r.injector)
+
+    def test_tick_messages_empty(self):
+        r = Rain(24, 80)
+        self.assertEqual(r.tick_messages(), [])
+
+    def test_tick_messages_with_text(self):
+        r = Rain(24, 80, message="neo")
+        # Run enough ticks for the cooldown to expire and a word to appear
+        cells = []
+        for _ in range(100):
+            r.tick()
+            cells = r.tick_messages()
+            if cells:
+                break
+        self.assertGreater(len(cells), 0)
+
+
+class TestMessageInjector(unittest.TestCase):
+    def test_init(self):
+        inj = MessageInjector("follow the white rabbit")
+        self.assertEqual(len(inj.words), 4)
+
+    def test_empty_text(self):
+        inj = MessageInjector("")
+        self.assertEqual(inj.words, [])
+        cells = inj.tick(24, 80)
+        self.assertEqual(cells, [])
+
+    def test_produces_cells(self):
+        inj = MessageInjector("wake up")
+        inj._cooldown = 0  # skip cooldown for testing
+        cells = inj.tick(24, 80)
+        self.assertGreater(len(cells), 0)
+
+    def test_cells_have_phases(self):
+        inj = MessageInjector("test")
+        inj._cooldown = 0
+        cells = inj.tick(24, 80)
+        for row, col, ch, phase in cells:
+            self.assertIn(phase, ("glow", "hold", "fade"))
 
 
 if __name__ == "__main__":

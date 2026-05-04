@@ -57,10 +57,27 @@ def main():
         print_version()
         return 0
 
+    # Collect message text from arguments
+    message = None
+    if args:
+        text_parts = []
+        for arg in args:
+            # If it looks like a file, read it
+            p = Path(arg)
+            if p.is_file():
+                try:
+                    text_parts.append(p.read_text(errors='replace'))
+                except OSError as e:
+                    print(f"matrix: cannot read {arg}: {e}", file=sys.stderr)
+                    return 1
+            else:
+                text_parts.append(arg)
+        message = " ".join(text_parts)
+
     try:
         def _run(stdscr):
             rows, cols = stdscr.getmaxyx()
-            rain = Rain(rows, cols)
+            rain = Rain(rows, cols, message=message)
             run_rain(stdscr, rain)
 
         curses.wrapper(_run)
