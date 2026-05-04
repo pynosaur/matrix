@@ -118,7 +118,6 @@ def _hide_titlebar():
         '  set title displays window size of myWindow to false\n'
         '  set title displays file name of myWindow to false\n'
         '  set title displays custom title of myWindow to false\n'
-        '  set title displays settings name of myWindow to false\n'
         'end tell'
     )
     try:
@@ -142,7 +141,6 @@ def _restore_titlebar():
         '  set title displays shell path of myWindow to true\n'
         '  set title displays window size of myWindow to true\n'
         '  set title displays custom title of myWindow to true\n'
-        '  set title displays settings name of myWindow to true\n'
         'end tell'
     )
     try:
@@ -163,23 +161,6 @@ def _toggle_fullscreen():
             ['osascript', '-e',
              'tell application "System Events" to '
              'keystroke "f" using {control down, command down}'],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-    except OSError:
-        pass
-
-
-def _bring_to_front():
-    """Bring Terminal window to front once without stealing keyboard focus."""
-    script = (
-        'tell application "System Events"\n'
-        '  set frontmost of process "Terminal" to true\n'
-        'end tell'
-    )
-    try:
-        subprocess.Popen(
-            ['osascript', '-e', script],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
@@ -220,8 +201,6 @@ def run_rain(stdscr, rain):
             if ch == 'f':
                 _toggle_fullscreen()
                 is_fullscreen = not is_fullscreen
-            elif ch == 'h':
-                _bring_to_front()
             elif ch == 'r':
                 rain.toggle_direction()
             elif ch in EFFECT_KEYS:

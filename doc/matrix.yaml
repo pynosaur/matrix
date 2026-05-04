@@ -26,7 +26,6 @@ EXAMPLES:
   - "matrix --self                # Rain your own source code"
 KEYBINDINGS:
   - "q / Q / Esc = quit"
-  - "h = hover (always on top, toggle)"
   - "r = reverse rain direction"
   - "b = burst effect"
   - "x = scatter effect"
