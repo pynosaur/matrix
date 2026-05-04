@@ -6,6 +6,7 @@ genrule(
         /opt/homebrew/bin/nuitka \
             --onefile \
             --include-data-dir=doc=doc \
+            --include-data-dir=app=_src \
             --onefile-tempdir-spec=/tmp/nuitka-matrix \
             --no-progressbar \
             --assume-yes-for-downloads \

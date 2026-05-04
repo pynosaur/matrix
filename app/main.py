@@ -59,9 +59,16 @@ def main():
 
     if args and args[0] == "--self":
         # Read own source code and use it as the message
-        src = Path(__file__).resolve()
+        base = Path(__file__).resolve().parent.parent
+        src_dir = base / "_src"  # Nuitka bundled source
+        if not src_dir.is_dir():
+            src_dir = base / "app"  # development fallback
         try:
-            message = src.read_text(errors='replace')
+            parts = []
+            for py in sorted(src_dir.rglob("*.py")):
+                parts.append(f"# ── {py.relative_to(src_dir)} ──")
+                parts.append(py.read_text(errors='replace'))
+            message = "\n".join(parts) if parts else "matrix"
         except OSError as e:
             print(f"matrix: {e}", file=sys.stderr)
             return 1
