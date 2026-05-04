@@ -82,18 +82,6 @@ class BurstEffect(Effect):
         return row, col
 
 
-class FlashEffect(Effect):
-    """Screen flash — everything goes bright white then fades back."""
-
-    def __init__(self):
-        super().__init__(duration=0.8)
-
-    def brightness_mod(self, row, col, rows, cols):
-        t = self.progress
-        # Sharp spike at start, quick decay
-        return 1.0 + 3.0 * (1.0 - t) ** 4
-
-
 class ReverseEffect(Effect):
     """Reverse gravity — rain decelerates to a stop, then drifts upward."""
 
@@ -143,7 +131,6 @@ class ScatterEffect(Effect):
 # Map of key -> effect factory
 EFFECT_KEYS = {
     'b': 'burst',
-    'f': 'flash',
     'r': 'reverse',
     'x': 'scatter',
 }
@@ -153,8 +140,6 @@ def create_effect(name, rows, cols):
     """Create an effect by name."""
     if name == 'burst':
         return BurstEffect(rows, cols)
-    elif name == 'flash':
-        return FlashEffect()
     elif name == 'reverse':
         return ReverseEffect()
     elif name == 'scatter':

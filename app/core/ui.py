@@ -6,6 +6,7 @@
 """Curses-based renderer for the Matrix rain."""
 
 import curses
+import subprocess
 import time
 
 from app.core.effects import EFFECT_KEYS, create_effect
@@ -105,6 +106,20 @@ def _pick_color(brightness, depth, is_head):
             return curses.color_pair(9)
 
 
+def _toggle_fullscreen():
+    """Toggle macOS native fullscreen (hides menu bar and title bar)."""
+    try:
+        subprocess.Popen(
+            ['osascript', '-e',
+             'tell application "System Events" to '
+             'keystroke "f" using {control down, command down}'],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    except OSError:
+        pass
+
+
 def run_rain(stdscr, rain):
     """Main render loop."""
     curses.curs_set(0)         # hide cursor
@@ -114,21 +129,30 @@ def run_rain(stdscr, rain):
     _init_colors()
     stdscr.bkgd(' ', curses.color_pair(0))
 
+    # Enter native fullscreen on launch
+    _toggle_fullscreen()
+
     target_fps = 30
     frame_time = 1.0 / target_fps
     effects = []  # active effects list
+    is_fullscreen = True
 
     while True:
         t0 = time.monotonic()
 
         key = stdscr.getch()
         if key in (ord('q'), ord('Q'), 27):  # q, Q, Esc
+            if is_fullscreen:
+                _toggle_fullscreen()
             break
 
         # Trigger effects from keypresses
         if key != -1:
             ch = chr(key) if 0 <= key < 256 else ''
-            if ch in EFFECT_KEYS:
+            if ch == 'f':
+                _toggle_fullscreen()
+                is_fullscreen = not is_fullscreen
+            elif ch in EFFECT_KEYS:
                 rows, cols = stdscr.getmaxyx()
                 eff = create_effect(EFFECT_KEYS[ch], rows, cols)
                 if eff:
