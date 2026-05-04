@@ -1,6 +1,6 @@
 NAME: matrix
 FULL_NAME: "Matrix Digital Rain"
-VERSION: "0.3.1"
+VERSION: "0.3.2"
 DESCRIPTION: >
   Matrix digital rain effect for your terminal. Renders authentic falling
   character streams with half-width katakana, depth layers, character mutation,
@@ -8,19 +8,22 @@ DESCRIPTION: >
   readable messages in the rain. Pure Python, stdlib only.
 USAGE:
   - "matrix"
-  - "matrix 'wake up neo'"
-  - "matrix document.txt"
+  - "matrix wake up neo"
+  - "matrix -f document.txt"
+  - "matrix --self"
   - "matrix -h"
   - "matrix -v"
 OPTIONS:
   - "-h, --help              Show help message"
   - "-v, --version           Show version information"
+  - "-f FILE                 Read FILE and embed its text in the rain"
+  - "--self                  Embed matrix's own source code in the rain"
   - "TEXT                    Word or phrase to embed in the rain"
-  - "FILE                    Text file whose content appears in the rain"
 EXAMPLES:
   - "matrix                       # Start the digital rain"
-  - "matrix 'follow the white rabbit'  # Embed a message"
-  - "matrix notes.txt              # Embed file contents"
+  - "matrix follow the white rabbit  # Embed a message"
+  - "matrix -f notes.txt          # Embed file contents"
+  - "matrix --self                # Rain your own source code"
 KEYBINDINGS:
   - "q / Q / Esc = quit"
 OUTPUT: >

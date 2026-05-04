@@ -59,10 +59,14 @@ def main():
 
     if args and args[0] == "--self":
         # Read own source code and use it as the message
-        base = Path(__file__).resolve().parent.parent
+        # Nuitka onefile: __file__ = /tmp/nuitka-matrix/main.py
+        #   .parent = /tmp/nuitka-matrix/ → _src/ lives here
+        # Dev: __file__ = .../matrix/app/main.py
+        #   .parent = .../matrix/app/ → the source dir itself
+        base = Path(__file__).resolve().parent
         src_dir = base / "_src"  # Nuitka bundled source
         if not src_dir.is_dir():
-            src_dir = base / "app"  # development fallback
+            src_dir = base  # dev fallback: app/ is the source dir
         try:
             parts = []
             for py in sorted(src_dir.rglob("*.py")):
