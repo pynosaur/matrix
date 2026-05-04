@@ -57,69 +57,56 @@ def main():
         print_version()
         return 0
 
-    # Parse image flag
-    image_path = None
-    if args and args[0] == "-i":
-        if len(args) < 2:
-            print("matrix: -i requires an image path", file=sys.stderr)
+    if args and args[0] == "--self":
+        # Read own source code and use it as the message
+        src = Path(__file__).resolve()
+        try:
+            message = src.read_text(errors='replace')
+        except OSError as e:
+            print(f"matrix: {e}", file=sys.stderr)
             return 1
-        image_path = args[1]
-        args = args[2:]
+        args = args[1:]
+        # Fall through to rain with source as message
 
-    # Collect message text from remaining arguments
-    message = None
-    if args:
-        text_parts = []
-        for arg in args:
-            # If it looks like a text file, read it
-            p = Path(arg)
-            if p.is_file() and not _is_image(p):
-                try:
-                    text_parts.append(p.read_text(errors='replace'))
-                except OSError as e:
-                    print(f"matrix: cannot read {arg}: {e}", file=sys.stderr)
+    else:
+        # Parse flags
+        message = None
+
+        while args and args[0].startswith('-') and args[0] not in ('-',):
+            if args[0] == "-f":
+                if len(args) < 2:
+                    print("matrix: -f requires a file path", file=sys.stderr)
                     return 1
-            elif p.is_file() and _is_image(p):
-                # Treat image args as image (even without -i)
-                image_path = str(p)
+                fpath = Path(args[1])
+                if not fpath.is_file():
+                    print(f"matrix: {args[1]}: No such file", file=sys.stderr)
+                    return 1
+                try:
+                    file_text = fpath.read_text(errors='replace')
+                    message = (message + " " + file_text) if message else file_text
+                except OSError as e:
+                    print(f"matrix: {args[1]}: {e}", file=sys.stderr)
+                    return 1
+                args = args[2:]
             else:
-                text_parts.append(arg)
-        if text_parts:
-            message = " ".join(text_parts)
+                break
 
-    # Load image grid if specified
-    image_grid = None
-    if image_path:
-        from app.core.image import image_to_grid
-        # We'll load at actual terminal size inside the wrapper
-        pass
+        # Remaining args are message text
+        if args:
+            text = " ".join(args)
+            message = (message + " " + text) if message else text
 
     try:
         def _run(stdscr):
             rows, cols = stdscr.getmaxyx()
-            grid = None
-            if image_path:
-                from app.core.image import image_to_grid
-                grid = image_to_grid(image_path, rows, cols)
-                if grid is None:
-                    # Couldn't load — just show rain
-                    pass
             rain = Rain(rows, cols, message=message)
-            run_rain(stdscr, rain, image_grid=grid)
+            run_rain(stdscr, rain)
 
         curses.wrapper(_run)
     except KeyboardInterrupt:
         pass
 
     return 0
-
-
-_IMAGE_EXTS = {'.png', '.jpg', '.jpeg', '.gif', '.bmp', '.tiff', '.webp', '.ppm', '.pgm'}
-
-
-def _is_image(path):
-    """Check if a path looks like an image file."""
-    return path.suffix.lower() in _IMAGE_EXTS
 
 
 if __name__ == "__main__":

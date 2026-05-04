@@ -105,7 +105,7 @@ def _pick_color(brightness, depth, is_head):
             return curses.color_pair(9)
 
 
-def run_rain(stdscr, rain, image_grid=None):
+def run_rain(stdscr, rain):
     """Main render loop."""
     curses.curs_set(0)         # hide cursor
     stdscr.nodelay(True)       # non-blocking getch
@@ -154,18 +154,6 @@ def run_rain(stdscr, rain, image_grid=None):
             if 0 <= row < rows and 0 <= col < cols:
                 msg_positions.add((row, col))
 
-        # Image grid positions (rendered as green chars shaped by brightness)
-        img_positions = set()
-        if image_grid:
-            img_offset_r = max(0, (rows - len(image_grid)) // 2)
-            img_offset_c = max(0, (cols - (len(image_grid[0]) if image_grid else 0)) // 2)
-            for iy, img_row in enumerate(image_grid):
-                for ix, (ich, ibright) in enumerate(img_row):
-                    r = img_offset_r + iy
-                    c = img_offset_c + ix
-                    if 0 <= r < rows and 0 <= c < cols and ibright > 0.1:
-                        img_positions.add((r, c))
-
         for stream in rain.streams:
             for idx, (row, ch, brightness) in enumerate(
                 stream.visible_cells(rows)
@@ -189,10 +177,6 @@ def run_rain(stdscr, rain, image_grid=None):
                 if draw_row < 0 or draw_row >= rows or draw_col < 0 or draw_col >= cols:
                     continue
 
-                # If on an image position, boost brightness for shape
-                if (row, stream.col) in img_positions:
-                    brightness = min(1.0, brightness + 0.4)
-
                 is_head = (idx == 0)
                 eff_brightness = min(1.0, brightness * bright_mod)
                 attr = _pick_color(eff_brightness, stream.depth, is_head)
@@ -200,25 +184,6 @@ def run_rain(stdscr, rain, image_grid=None):
                     stdscr.addstr(draw_row, draw_col, ch, attr)
                 except curses.error:
                     pass
-
-        # Render image silhouette in gaps (where no rain stream is active)
-        if image_grid:
-            img_offset_r = max(0, (rows - len(image_grid)) // 2)
-            img_offset_c = max(0, (cols - (len(image_grid[0]) if image_grid else 0)) // 2)
-            for iy, img_row in enumerate(image_grid):
-                for ix, (ich, ibright) in enumerate(img_row):
-                    r = img_offset_r + iy
-                    c = img_offset_c + ix
-                    if 0 <= r < rows and 0 <= c < cols and ibright > 0.15:
-                        # Only draw if no rain char was already drawn there
-                        existing = stdscr.inch(r, c) & 0xFF
-                        if existing == ord(' '):
-                            from app.core.rain import random_char
-                            attr = _pick_color(ibright * 0.6, 0.8, False)
-                            try:
-                                stdscr.addstr(r, c, random_char(), attr)
-                            except curses.error:
-                                pass
 
         # Render message cells on top
         for row, col, ch, phase in msg_cells:

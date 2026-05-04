@@ -117,10 +117,9 @@ class MessageInjector:
             target_row = random.randint(4, max(4, rows - 5))
 
             for i, ch in enumerate(word):
-                # Each char starts above screen and falls to target
                 start_delay = i * random.randint(3, 7) + random.randint(0, 5)
                 cell = {
-                    'row': random.randint(-8, -1),  # start above
+                    'row': random.randint(-8, -1),
                     'col': col + i,
                     'target_row': target_row,
                     'char': ch,
