@@ -28,15 +28,19 @@ class Stream:
 
     __slots__ = (
         "col", "speed", "head", "length", "chars", "age",
-        "depth", "mutate_rate", "_tick_acc",
+        "depth", "mutate_rate", "_tick_acc", "direction",
     )
 
-    def __init__(self, col, rows, depth=1.0):
+    def __init__(self, col, rows, depth=1.0, direction=1):
         self.col = col
         self.depth = depth                    # 0.3–1.0, affects brightness
         self.speed = random.uniform(0.4, 1.6) * depth
         self.length = random.randint(4, rows)
-        self.head = random.randint(-rows, -1)  # start off-screen
+        self.direction = direction            # 1 = down, -1 = up
+        if direction == 1:
+            self.head = random.randint(-rows, -1)   # start above screen
+        else:
+            self.head = random.randint(rows, 2 * rows)  # start below
         self.chars = [random_char() for _ in range(self.length)]
         self.age = 0
         self.mutate_rate = random.uniform(0.02, 0.12)
@@ -47,7 +51,7 @@ class Stream:
         self._tick_acc += self.speed
         while self._tick_acc >= 1.0:
             self._tick_acc -= 1.0
-            self.head += 1
+            self.head += self.direction
             self.age += 1
 
         # Randomly mutate some characters (they flicker in the movie)
@@ -55,9 +59,13 @@ class Stream:
             if random.random() < self.mutate_rate:
                 self.chars[i] = random_char()
 
-        # Stream is dead once fully off-screen below
-        tail = self.head - self.length
-        return tail < rows
+        # Stream is dead once fully off-screen
+        if self.direction == 1:
+            tail = self.head - self.length
+            return tail < rows
+        else:
+            tail = self.head + self.length
+            return tail >= 0
 
     def visible_cells(self, rows):
         """Yield (row, char, brightness) for on-screen cells.
@@ -65,7 +73,7 @@ class Stream:
         brightness: 0.0–1.0 where 1.0 is the bright head.
         """
         for i in range(self.length):
-            row = self.head - i
+            row = self.head - i * self.direction
             if 0 <= row < rows:
                 # Brightness fades from head (1.0) to tail (0.0)
                 bright = 1.0 - (i / self.length)
@@ -216,6 +224,12 @@ class Rain:
         self.streams = []
         self._spawn_cooldowns = {}  # col -> ticks until next spawn allowed
         self.injector = MessageInjector(message) if message else None
+        self.direction = 1  # 1 = down, -1 = up
+
+    def toggle_direction(self):
+        """Flip rain direction. Existing streams keep their direction
+        and die out naturally."""
+        self.direction *= -1
 
     def resize(self, rows, cols):
         self.rows = rows
@@ -242,7 +256,7 @@ class Rain:
             # Probability of spawning
             if random.random() < 0.015:
                 depth = random.choice([0.3, 0.5, 0.7, 1.0, 1.0, 1.0])
-                s = Stream(col, self.rows, depth)
+                s = Stream(col, self.rows, depth, self.direction)
                 self.streams.append(s)
                 self._spawn_cooldowns[col] = random.randint(5, 25)
 

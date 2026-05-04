@@ -82,33 +82,6 @@ class BurstEffect(Effect):
         return row, col
 
 
-class ReverseEffect(Effect):
-    """Reverse gravity — rain decelerates to a stop, then drifts upward."""
-
-    def __init__(self):
-        super().__init__(duration=4.0)
-
-    def transform(self, row, col, rows, cols):
-        t = self.progress
-        # Phase 1 (0–0.35): decelerate — chars slow down, barely move
-        # Phase 2 (0.35–1.0): reverse — chars drift upward, accelerating
-        if t < 0.35:
-            # Slow-down phase: slight upward resistance, gets stronger
-            strength = (t / 0.35) ** 2  # ease-in
-            shift = int(row * strength * 0.08)
-            new_row = row - shift
-        else:
-            # Reverse phase: accelerate upward
-            rev_t = (t - 0.35) / 0.65  # 0→1 within reverse phase
-            strength = rev_t ** 1.5  # accelerating
-            shift = int(row * strength * 0.6)
-            new_row = row - shift
-
-        if 0 <= new_row < rows:
-            return new_row, col
-        return None
-
-
 class ScatterEffect(Effect):
     """Characters scatter randomly from their positions then reform."""
 
@@ -131,7 +104,6 @@ class ScatterEffect(Effect):
 # Map of key -> effect factory
 EFFECT_KEYS = {
     'b': 'burst',
-    'r': 'reverse',
     'x': 'scatter',
 }
 
@@ -140,8 +112,6 @@ def create_effect(name, rows, cols):
     """Create an effect by name."""
     if name == 'burst':
         return BurstEffect(rows, cols)
-    elif name == 'reverse':
-        return ReverseEffect()
     elif name == 'scatter':
         return ScatterEffect()
     return None

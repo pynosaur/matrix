@@ -194,6 +194,8 @@ def run_rain(stdscr, rain):
                     _start_on_top()
                 else:
                     _stop_on_top()
+            elif ch == 'r':
+                rain.toggle_direction()
             elif ch in EFFECT_KEYS:
                 rows, cols = stdscr.getmaxyx()
                 eff = create_effect(EFFECT_KEYS[ch], rows, cols)
