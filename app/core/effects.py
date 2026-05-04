@@ -37,50 +37,74 @@ class Effect:
 
 
 class WaveEffect(Effect):
-    """Ripple wave — distorts columns like a sine wave passing through."""
+    """Horizontal wave — propagates from one side, displaces rows smoothly."""
 
     def __init__(self):
-        super().__init__(duration=2.5)
-        self.amplitude = random.uniform(2.0, 4.0)
-        self.frequency = random.uniform(0.15, 0.3)
+        super().__init__(duration=3.0)
+        self.amplitude = random.uniform(1.5, 3.0)
+        self.wavelength = random.uniform(8, 16)
+        self.speed = random.uniform(40, 70)
         self.direction = random.choice([-1, 1])
 
     def transform(self, row, col, rows, cols):
         t = self.progress
-        # Wave travels across columns
-        phase = self.direction * (col * self.frequency - t * 8)
-        # Amplitude fades in and out
-        amp = self.amplitude * math.sin(t * math.pi)
-        offset = int(amp * math.sin(phase))
-        new_row = row + offset
+        # Wave front position (travels across screen)
+        front = self.direction * self.speed * t
+        # Distance from wave front determines if this col is affected
+        dist_from_front = col - front if self.direction > 0 else (cols - col) - front
+        # Only affect columns the wave has reached
+        if dist_from_front < 0 or dist_from_front > self.wavelength * 2:
+            return row, col
+        # Smooth envelope: wave builds up, passes, then settles
+        envelope = math.sin(math.pi * dist_from_front / (self.wavelength * 2))
+        offset = self.amplitude * envelope * math.sin(dist_from_front / self.wavelength * math.pi * 2)
+        new_row = row + int(offset)
         if 0 <= new_row < rows:
             return new_row, col
-        return None
+        return row, col
 
 
 class BurstEffect(Effect):
-    """Explosion from center — pushes characters outward briefly."""
+    """Shockwave ring — expands outward from center, displacing chars it passes."""
 
     def __init__(self, rows, cols):
-        super().__init__(duration=1.5)
+        super().__init__(duration=2.0)
         self.cy = rows // 2
         self.cx = cols // 2
-        self.force = random.uniform(8, 14)
+        # Max radius is the diagonal
+        self.max_radius = math.sqrt(rows**2 + cols**2) * 0.6
+        self.ring_width = random.uniform(4, 8)
 
     def transform(self, row, col, rows, cols):
         t = self.progress
-        # Force peaks at start, decays
-        strength = self.force * (1.0 - t) ** 2
-        dx = col - self.cx
+        # Ring radius expands over time
+        radius = t * self.max_radius
+        # Distance from center (account for char aspect ratio)
+        dx = (col - self.cx) * 0.5  # chars are ~2x taller than wide
         dy = row - self.cy
-        dist = math.sqrt(dx * dx + dy * dy) + 0.1
-        # Push outward, strongest near center
-        push = strength / (dist * 0.3 + 1)
-        new_row = int(row + (dy / dist) * push)
-        new_col = int(col + (dx / dist) * push)
+        dist = math.sqrt(dx * dx + dy * dy)
+
+        # Only displace chars near the ring edge
+        ring_dist = abs(dist - radius)
+        if ring_dist > self.ring_width:
+            return row, col
+
+        # Push outward proportional to closeness to ring center
+        strength = (1.0 - ring_dist / self.ring_width) * 2.0
+        # Decay strength over time
+        strength *= (1.0 - t * 0.5)
+
+        if dist < 0.1:
+            return row, col
+
+        push_r = int((dy / dist) * strength)
+        push_c = int(((col - self.cx) / (dist * 2 + 0.1)) * strength)
+        new_row = row + push_r
+        new_col = col + push_c
+
         if 0 <= new_row < rows and 0 <= new_col < cols:
             return new_row, new_col
-        return None
+        return row, col
 
 
 class FlashEffect(Effect):
@@ -96,17 +120,18 @@ class FlashEffect(Effect):
 
 
 class ReverseEffect(Effect):
-    """Briefly reverses gravity — streams appear to fall upward."""
+    """Reverses gravity — all characters drift upward."""
 
     def __init__(self):
-        super().__init__(duration=2.0)
+        super().__init__(duration=3.0)
 
     def transform(self, row, col, rows, cols):
         t = self.progress
-        # Mirror vertically, blend in/out
-        blend = math.sin(t * math.pi)  # 0 -> 1 -> 0
-        mirror_row = rows - 1 - row
-        new_row = int(row + (mirror_row - row) * blend)
+        # Smooth ease in/out for the upward push
+        strength = math.sin(t * math.pi)
+        # Shift everything up — further from top = more shift
+        shift = int(row * strength * 0.4)
+        new_row = row - shift
         if 0 <= new_row < rows:
             return new_row, col
         return None
