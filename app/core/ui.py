@@ -7,6 +7,7 @@
 
 import curses
 import subprocess
+import threading
 import time
 
 from app.core.effects import EFFECT_KEYS, create_effect
@@ -120,6 +121,41 @@ def _toggle_fullscreen():
         pass
 
 
+def _set_always_on_top(on):
+    """Keep Terminal window above all others using a background thread."""
+    pass
+
+
+_on_top_stop = threading.Event()
+
+
+def _start_on_top():
+    """Spawn a daemon thread that periodically raises Terminal to front."""
+    _on_top_stop.clear()
+
+    def _keep_on_top():
+        while not _on_top_stop.is_set():
+            try:
+                subprocess.run(
+                    ['osascript', '-e',
+                     'tell application "Terminal" to activate'],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    timeout=2,
+                )
+            except (OSError, subprocess.TimeoutExpired):
+                pass
+            _on_top_stop.wait(0.5)
+
+    t = threading.Thread(target=_keep_on_top, daemon=True)
+    t.start()
+
+
+def _stop_on_top():
+    """Stop the always-on-top background thread."""
+    _on_top_stop.set()
+
+
 def run_rain(stdscr, rain):
     """Main render loop."""
     curses.curs_set(0)         # hide cursor
@@ -133,6 +169,7 @@ def run_rain(stdscr, rain):
     frame_time = 1.0 / target_fps
     effects = []  # active effects list
     is_fullscreen = False
+    is_on_top = False
 
     while True:
         t0 = time.monotonic()
@@ -141,6 +178,8 @@ def run_rain(stdscr, rain):
         if key in (ord('q'), ord('Q'), 27):  # q, Q, Esc
             if is_fullscreen:
                 _toggle_fullscreen()
+            if is_on_top:
+                _stop_on_top()
             break
 
         # Trigger effects from keypresses
@@ -149,6 +188,12 @@ def run_rain(stdscr, rain):
             if ch == 'f':
                 _toggle_fullscreen()
                 is_fullscreen = not is_fullscreen
+            elif ch == 'o':
+                is_on_top = not is_on_top
+                if is_on_top:
+                    _start_on_top()
+                else:
+                    _stop_on_top()
             elif ch in EFFECT_KEYS:
                 rows, cols = stdscr.getmaxyx()
                 eff = create_effect(EFFECT_KEYS[ch], rows, cols)
