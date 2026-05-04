@@ -57,34 +57,69 @@ def main():
         print_version()
         return 0
 
-    # Collect message text from arguments
+    # Parse image flag
+    image_path = None
+    if args and args[0] == "-i":
+        if len(args) < 2:
+            print("matrix: -i requires an image path", file=sys.stderr)
+            return 1
+        image_path = args[1]
+        args = args[2:]
+
+    # Collect message text from remaining arguments
     message = None
     if args:
         text_parts = []
         for arg in args:
-            # If it looks like a file, read it
+            # If it looks like a text file, read it
             p = Path(arg)
-            if p.is_file():
+            if p.is_file() and not _is_image(p):
                 try:
                     text_parts.append(p.read_text(errors='replace'))
                 except OSError as e:
                     print(f"matrix: cannot read {arg}: {e}", file=sys.stderr)
                     return 1
+            elif p.is_file() and _is_image(p):
+                # Treat image args as image (even without -i)
+                image_path = str(p)
             else:
                 text_parts.append(arg)
-        message = " ".join(text_parts)
+        if text_parts:
+            message = " ".join(text_parts)
+
+    # Load image grid if specified
+    image_grid = None
+    if image_path:
+        from app.core.image import image_to_grid
+        # We'll load at actual terminal size inside the wrapper
+        pass
 
     try:
         def _run(stdscr):
             rows, cols = stdscr.getmaxyx()
+            grid = None
+            if image_path:
+                from app.core.image import image_to_grid
+                grid = image_to_grid(image_path, rows, cols)
+                if grid is None:
+                    # Couldn't load — just show rain
+                    pass
             rain = Rain(rows, cols, message=message)
-            run_rain(stdscr, rain)
+            run_rain(stdscr, rain, image_grid=grid)
 
         curses.wrapper(_run)
     except KeyboardInterrupt:
         pass
 
     return 0
+
+
+_IMAGE_EXTS = {'.png', '.jpg', '.jpeg', '.gif', '.bmp', '.tiff', '.webp', '.ppm', '.pgm'}
+
+
+def _is_image(path):
+    """Check if a path looks like an image file."""
+    return path.suffix.lower() in _IMAGE_EXTS
 
 
 if __name__ == "__main__":

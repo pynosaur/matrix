@@ -8,6 +8,8 @@
 import curses
 import time
 
+from app.core.effects import EFFECT_KEYS, create_effect
+
 
 def _init_colors():
     """Set up color pairs for depth-based green shading."""
@@ -103,7 +105,7 @@ def _pick_color(brightness, depth, is_head):
             return curses.color_pair(9)
 
 
-def run_rain(stdscr, rain):
+def run_rain(stdscr, rain, image_grid=None):
     """Main render loop."""
     curses.curs_set(0)         # hide cursor
     stdscr.nodelay(True)       # non-blocking getch
@@ -114,6 +116,7 @@ def run_rain(stdscr, rain):
 
     target_fps = 30
     frame_time = 1.0 / target_fps
+    effects = []  # active effects list
 
     while True:
         t0 = time.monotonic()
@@ -121,6 +124,18 @@ def run_rain(stdscr, rain):
         key = stdscr.getch()
         if key in (ord('q'), ord('Q'), 27):  # q, Q, Esc
             break
+
+        # Trigger effects from keypresses
+        if key != -1:
+            ch = chr(key) if 0 <= key < 256 else ''
+            if ch in EFFECT_KEYS:
+                rows, cols = stdscr.getmaxyx()
+                eff = create_effect(EFFECT_KEYS[ch], rows, cols)
+                if eff:
+                    effects.append(eff)
+
+        # Prune dead effects
+        effects = [e for e in effects if e.alive]
 
         # Handle resize
         rows, cols = stdscr.getmaxyx()
@@ -139,6 +154,18 @@ def run_rain(stdscr, rain):
             if 0 <= row < rows and 0 <= col < cols:
                 msg_positions.add((row, col))
 
+        # Image grid positions (rendered as green chars shaped by brightness)
+        img_positions = set()
+        if image_grid:
+            img_offset_r = max(0, (rows - len(image_grid)) // 2)
+            img_offset_c = max(0, (cols - (len(image_grid[0]) if image_grid else 0)) // 2)
+            for iy, img_row in enumerate(image_grid):
+                for ix, (ich, ibright) in enumerate(img_row):
+                    r = img_offset_r + iy
+                    c = img_offset_c + ix
+                    if 0 <= r < rows and 0 <= c < cols and ibright > 0.1:
+                        img_positions.add((r, c))
+
         for stream in rain.streams:
             for idx, (row, ch, brightness) in enumerate(
                 stream.visible_cells(rows)
@@ -147,12 +174,51 @@ def run_rain(stdscr, rain):
                     continue
                 if (row, stream.col) in msg_positions:
                     continue  # message takes priority
+
+                # Apply effects to position
+                draw_row, draw_col = row, stream.col
+                bright_mod = 1.0
+                for eff in effects:
+                    result = eff.transform(draw_row, draw_col, rows, cols)
+                    if result is None:
+                        draw_row = -1  # skip this cell
+                        break
+                    draw_row, draw_col = result
+                    bright_mod *= eff.brightness_mod(row, stream.col, rows, cols)
+
+                if draw_row < 0 or draw_row >= rows or draw_col < 0 or draw_col >= cols:
+                    continue
+
+                # If on an image position, boost brightness for shape
+                if (row, stream.col) in img_positions:
+                    brightness = min(1.0, brightness + 0.4)
+
                 is_head = (idx == 0)
-                attr = _pick_color(brightness, stream.depth, is_head)
+                eff_brightness = min(1.0, brightness * bright_mod)
+                attr = _pick_color(eff_brightness, stream.depth, is_head)
                 try:
-                    stdscr.addstr(row, stream.col, ch, attr)
+                    stdscr.addstr(draw_row, draw_col, ch, attr)
                 except curses.error:
-                    pass  # bottom-right corner write is expected to fail
+                    pass
+
+        # Render image silhouette in gaps (where no rain stream is active)
+        if image_grid:
+            img_offset_r = max(0, (rows - len(image_grid)) // 2)
+            img_offset_c = max(0, (cols - (len(image_grid[0]) if image_grid else 0)) // 2)
+            for iy, img_row in enumerate(image_grid):
+                for ix, (ich, ibright) in enumerate(img_row):
+                    r = img_offset_r + iy
+                    c = img_offset_c + ix
+                    if 0 <= r < rows and 0 <= c < cols and ibright > 0.15:
+                        # Only draw if no rain char was already drawn there
+                        existing = stdscr.inch(r, c) & 0xFF
+                        if existing == ord(' '):
+                            from app.core.rain import random_char
+                            attr = _pick_color(ibright * 0.6, 0.8, False)
+                            try:
+                                stdscr.addstr(r, c, random_char(), attr)
+                            except curses.error:
+                                pass
 
         # Render message cells on top
         for row, col, ch, phase in msg_cells:

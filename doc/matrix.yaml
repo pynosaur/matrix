@@ -1,6 +1,6 @@
 NAME: matrix
 FULL_NAME: "Matrix Digital Rain"
-VERSION: "0.2.0"
+VERSION: "0.3.0"
 DESCRIPTION: >
   Matrix digital rain effect for your terminal. Renders authentic falling
   character streams with half-width katakana, depth layers, character mutation,
