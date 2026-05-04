@@ -1,6 +1,6 @@
 NAME: matrix
 FULL_NAME: "Matrix Digital Rain"
-VERSION: "0.4.0"
+VERSION: "0.4.1"
 DESCRIPTION: >
   Matrix digital rain effect for your terminal. Renders authentic falling
   character streams with half-width katakana, depth layers, character mutation,
@@ -26,6 +26,10 @@ EXAMPLES:
   - "matrix --self                # Rain your own source code"
 KEYBINDINGS:
   - "q / Q / Esc = quit"
+  - "h = hover (always on top, toggle)"
+  - "r = reverse rain direction"
+  - "b = burst effect"
+  - "x = scatter effect"
 OUTPUT: >
   Full-screen curses TUI rendering the Matrix digital rain effect with 256-color
   green gradient. Falls back gracefully to 8-color terminals.

@@ -107,13 +107,23 @@ def _pick_color(brightness, depth, is_head):
             return curses.color_pair(9)
 
 
-def _toggle_fullscreen():
-    """Toggle macOS native fullscreen (hides menu bar and title bar)."""
+def _hide_titlebar():
+    """Hide the Terminal window title bar and toolbar on launch."""
+    script = (
+        'tell application "Terminal"\n'
+        '  set myWindow to front window\n'
+        '  set myTab to selected tab of myWindow\n'
+        '  set custom title of myTab to " "\n'
+        '  set title displays device name of myWindow to false\n'
+        '  set title displays shell path of myWindow to false\n'
+        '  set title displays window size of myWindow to false\n'
+        '  set title displays file name of myWindow to false\n'
+        '  set title displays custom title of myWindow to false\n'
+        'end tell'
+    )
     try:
         subprocess.Popen(
-            ['osascript', '-e',
-             'tell application "System Events" to '
-             'keystroke "f" using {control down, command down}'],
+            ['osascript', '-e', script],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
@@ -121,9 +131,26 @@ def _toggle_fullscreen():
         pass
 
 
-def _set_always_on_top(on):
-    """Keep Terminal window above all others using a background thread."""
-    pass
+def _restore_titlebar():
+    """Restore the Terminal window title bar on exit."""
+    script = (
+        'tell application "Terminal"\n'
+        '  set myWindow to front window\n'
+        '  set myTab to selected tab of myWindow\n'
+        '  set title displays device name of myWindow to true\n'
+        '  set title displays shell path of myWindow to true\n'
+        '  set title displays window size of myWindow to true\n'
+        '  set title displays custom title of myWindow to true\n'
+        'end tell'
+    )
+    try:
+        subprocess.Popen(
+            ['osascript', '-e', script],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    except OSError:
+        pass
 
 
 _on_top_stop = threading.Event()
@@ -165,10 +192,12 @@ def run_rain(stdscr, rain):
     _init_colors()
     stdscr.bkgd(' ', curses.color_pair(0))
 
+    # Hide title bar clutter on launch
+    _hide_titlebar()
+
     target_fps = 30
     frame_time = 1.0 / target_fps
     effects = []  # active effects list
-    is_fullscreen = False
     is_on_top = False
 
     while True:
@@ -176,19 +205,15 @@ def run_rain(stdscr, rain):
 
         key = stdscr.getch()
         if key in (ord('q'), ord('Q'), 27):  # q, Q, Esc
-            if is_fullscreen:
-                _toggle_fullscreen()
             if is_on_top:
                 _stop_on_top()
+            _restore_titlebar()
             break
 
         # Trigger effects from keypresses
         if key != -1:
             ch = chr(key) if 0 <= key < 256 else ''
-            if ch == 'f':
-                _toggle_fullscreen()
-                is_fullscreen = not is_fullscreen
-            elif ch == 'o':
+            if ch == 'h':
                 is_on_top = not is_on_top
                 if is_on_top:
                     _start_on_top()
