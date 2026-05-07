@@ -56,7 +56,7 @@ jobs:
             --include-data-dir=doc=doc \
             --include-data-files=app/*.py=_src/ \
             --include-data-files=app/**/*.py=_src/ \
-            --onefile-tempdir-spec=/tmp/nuitka-${{ steps.meta.outputs.name }} \
+            --onefile-tempdir-spec=/tmp/nuitka-${{ steps.meta.outputs.name }}-${{ steps.meta.outputs.version }} \
             --no-progressbar \
             --assume-yes-for-downloads \
             --output-filename=${{ steps.meta.outputs.asset }} \
