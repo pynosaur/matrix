@@ -69,6 +69,7 @@ def main():
             src_file = src_dir / "rain.py"
         try:
             message = src_file.read_text(errors='replace')
+            message = message.replace('\x00', '')
         except OSError as e:
             print(f"matrix: {e}", file=sys.stderr)
             return 1
@@ -89,6 +90,7 @@ def main():
                     return 1
                 try:
                     file_text = fpath.read_text(errors='replace')
+                    file_text = file_text.replace('\x00', '')
                     message = (message + " " + file_text) if message else file_text
                 except OSError as e:
                     print(f"matrix: {args[1]}: {e}", file=sys.stderr)
