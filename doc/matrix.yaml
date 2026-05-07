@@ -5,7 +5,7 @@ DESCRIPTION: >
   Matrix digital rain effect for your terminal. Renders authentic falling
   character streams with half-width katakana, depth layers, character mutation,
   variable speeds, and bright head glow. Embed messages, Shakespeare, lorem
-  ipsum, or raw binary hex in the rain. Pure Python, stdlib only.
+  ipsum, or the raw hex of any file in the rain. Pure Python, stdlib only.
 USAGE:
   - "matrix"
   - "matrix wake up neo"
@@ -20,7 +20,7 @@ OPTIONS:
   - "-h, --help              Show help message"
   - "-v, --version           Show version information"
   - "-f FILE                 Read FILE and embed its text in the rain"
-  - "-x FILE                 Read FILE as raw binary, rain its hex"
+  - "-x FILE                 Read any file as raw bytes, rain its hex"
   - "--self                  Embed matrix's own source code in the rain"
   - "--hamlet                Embed Shakespeare's Hamlet in the rain"
   - "--lorem                 Embed Lorem Ipsum text in the rain"
@@ -30,7 +30,7 @@ EXAMPLES:
   - "matrix follow the white rabbit    # Embed a message"
   - "matrix --hamlet                   # Rain Shakespeare's Hamlet"
   - "matrix --lorem                    # Rain Lorem Ipsum"
-  - "matrix -x screenplay.pdf          # Rain hex of a PDF file"
+  - "matrix -x screenplay.pdf          # Rain hex of any file"
   - "matrix -f notes.txt               # Embed file contents"
   - "matrix --self                     # Rain your own source code"
 KEYBINDINGS:

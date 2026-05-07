@@ -81,11 +81,11 @@ animi, id est laborum et dolorum fuga."""
 
 
 def read_binary_as_hex(path: Path, max_bytes: int = 4096) -> str:
-    """Read a file as raw binary and return hex representation.
+    """Read any file as raw bytes and return hex representation.
 
-    Reads the actual bytes (0s and 1s at the hardware level) and
-    converts them to their hexadecimal string form. Pure Python,
-    no third-party dependencies.
+    Every file is bytes. This reads them and converts to their
+    hexadecimal string form. Works on anything: text, PDFs, images,
+    executables, whatever. Pure Python, no third-party dependencies.
     """
     with open(path, 'rb') as f:
         raw = f.read(max_bytes)
@@ -93,10 +93,10 @@ def read_binary_as_hex(path: Path, max_bytes: int = 4096) -> str:
 
 
 def get_matrix_hex() -> str:
-    """Read the matrix tool's own binary and return hex.
+    """Read the matrix tool's own source as raw bytes, return hex.
 
-    In compiled (Nuitka) mode: reads the actual executable binary.
-    In dev mode: reads main.py source bytes.
+    In dev mode: reads main.py bytes.
+    In compiled (Nuitka) mode: reads the executable.
     Either way, you see the raw data behind the matrix.
     """
     exe = Path(sys.executable)
