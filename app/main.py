@@ -58,8 +58,7 @@ def main():
         print_version()
         return 0
 
-    # Built-in source flags
-    source_flags = {'--hamlet': 'hamlet', '--lorem': 'lorem', '--matrix': 'matrix'}
+    source_flags = {'--hamlet': 'hamlet', '--lorem': 'lorem'}
 
     if args and args[0] == "--self":
         base = Path(__file__).resolve().parent
@@ -77,14 +76,9 @@ def main():
 
     elif args and args[0] in source_flags:
         source_name = source_flags[args[0]]
-        file_arg = None
-        if source_name == 'matrix' and len(args) >= 2 and not args[1].startswith('-'):
-            file_arg = args[1]
-            args = args[2:]
-        else:
-            args = args[1:]
+        args = args[1:]
         try:
-            message = get_source(source_name, path=file_arg)
+            message = get_source(source_name)
         except (FileNotFoundError, OSError) as e:
             print(f"matrix: {e}", file=sys.stderr)
             return 1
@@ -106,6 +100,17 @@ def main():
                     file_text = file_text.replace('\x00', '')
                     message = (message + " " + file_text) if message else file_text
                 except OSError as e:
+                    print(f"matrix: {args[1]}: {e}", file=sys.stderr)
+                    return 1
+                args = args[2:]
+            elif args[0] == "-x":
+                if len(args) < 2:
+                    print("matrix: -x requires a file path", file=sys.stderr)
+                    return 1
+                try:
+                    hex_text = get_source('matrix', path=args[1])
+                    message = (message + " " + hex_text) if message else hex_text
+                except (FileNotFoundError, OSError) as e:
                     print(f"matrix: {args[1]}: {e}", file=sys.stderr)
                     return 1
                 args = args[2:]
