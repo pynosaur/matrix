@@ -13,6 +13,7 @@ if __name__ == "__main__" and __package__ is None:
 
 from app import __version__
 from app.core.rain import Rain
+from app.core.sources import get_source
 from app.core.ui import run_rain
 from app.utils.doc_reader import read_app_doc
 
@@ -57,16 +58,15 @@ def main():
         print_version()
         return 0
 
+    # Built-in source flags
+    source_flags = {'--hamlet': 'hamlet', '--lorem': 'lorem', '--matrix': 'matrix'}
+
     if args and args[0] == "--self":
-        # Read core/rain.py source — the rain engine
         base = Path(__file__).resolve().parent
         src_dir = base / "_src"  # Nuitka bundled source
         if not src_dir.is_dir():
-            src_dir = base / "core"  # dev fallback
+            src_dir = base / "core"
         src_file = src_dir / "rain.py"
-        if not src_file.is_file():
-            # flat Nuitka layout
-            src_file = src_dir / "rain.py"
         try:
             message = src_file.read_text(errors='replace')
             message = message.replace('\x00', '')
@@ -75,8 +75,21 @@ def main():
             return 1
         args = args[1:]
 
+    elif args and args[0] in source_flags:
+        source_name = source_flags[args[0]]
+        file_arg = None
+        if source_name == 'matrix' and len(args) >= 2 and not args[1].startswith('-'):
+            file_arg = args[1]
+            args = args[2:]
+        else:
+            args = args[1:]
+        try:
+            message = get_source(source_name, path=file_arg)
+        except (FileNotFoundError, OSError) as e:
+            print(f"matrix: {e}", file=sys.stderr)
+            return 1
+
     else:
-        # Parse flags
         message = None
 
         while args and args[0].startswith('-') and args[0] not in ('-',):
@@ -99,7 +112,6 @@ def main():
             else:
                 break
 
-        # Remaining args are message text
         if args:
             text = " ".join(args)
             message = (message + " " + text) if message else text

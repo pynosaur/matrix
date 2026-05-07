@@ -36,9 +36,6 @@ class Effect:
         return 1.0
 
 
-
-
-
 class BurstEffect(Effect):
     """Shockwave ring — expands outward from center, displacing chars it passes."""
 

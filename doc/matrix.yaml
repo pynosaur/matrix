@@ -1,14 +1,18 @@
 NAME: matrix
 FULL_NAME: "Matrix Digital Rain"
-VERSION: "0.4.3"
+VERSION: "1.0.0"
 DESCRIPTION: >
   Matrix digital rain effect for your terminal. Renders authentic falling
   character streams with half-width katakana, depth layers, character mutation,
-  variable speeds, and bright head glow. Pass a word or text file to embed
-  readable messages in the rain. Pure Python, stdlib only.
+  variable speeds, and bright head glow. Embed messages, Shakespeare, lorem
+  ipsum, or raw binary hex in the rain. Pure Python, stdlib only.
 USAGE:
   - "matrix"
   - "matrix wake up neo"
+  - "matrix --hamlet"
+  - "matrix --lorem"
+  - "matrix --matrix"
+  - "matrix --matrix /path/to/file.pdf"
   - "matrix -f document.txt"
   - "matrix --self"
   - "matrix -h"
@@ -18,12 +22,19 @@ OPTIONS:
   - "-v, --version           Show version information"
   - "-f FILE                 Read FILE and embed its text in the rain"
   - "--self                  Embed matrix's own source code in the rain"
+  - "--hamlet                Embed Shakespeare's Hamlet in the rain"
+  - "--lorem                 Embed Lorem Ipsum text in the rain"
+  - "--matrix [FILE]         Read binary as raw hex (own binary or FILE)"
   - "TEXT                    Word or phrase to embed in the rain"
 EXAMPLES:
-  - "matrix                       # Start the digital rain"
-  - "matrix follow the white rabbit  # Embed a message"
-  - "matrix -f notes.txt          # Embed file contents"
-  - "matrix --self                # Rain your own source code"
+  - "matrix                            # Start the digital rain"
+  - "matrix follow the white rabbit    # Embed a message"
+  - "matrix --hamlet                   # Rain Shakespeare's Hamlet"
+  - "matrix --lorem                    # Rain Lorem Ipsum"
+  - "matrix --matrix                   # Rain raw hex of own binary"
+  - "matrix --matrix screenplay.pdf    # Rain hex of a PDF file"
+  - "matrix -f notes.txt               # Embed file contents"
+  - "matrix --self                     # Rain your own source code"
 KEYBINDINGS:
   - "q / Q / Esc = quit"
   - "r = reverse rain direction"

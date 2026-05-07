@@ -158,9 +158,11 @@ def _toggle_fullscreen():
     """Toggle macOS native fullscreen."""
     try:
         subprocess.Popen(
-            ['osascript', '-e',
-             'tell application "System Events" to '
-             'keystroke "f" using {control down, command down}'],
+            [
+                'osascript', '-e',
+                'tell application "System Events" to '
+                'keystroke "f" using {control down, command down}',
+            ],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )

@@ -13,7 +13,7 @@
 
 Matrix digital rain effect for your terminal.
 
-Version: 0.4.3
+Version: 1.0.0
 
 ## Features
 

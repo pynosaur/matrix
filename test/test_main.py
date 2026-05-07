@@ -10,6 +10,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.core.rain import Rain, Stream, random_char, CHARSET, MessageInjector
+from app.core.sources import (
+    HAMLET, LOREM, get_source, read_binary_as_hex,
+)
 
 
 class TestRandomChar(unittest.TestCase):
@@ -149,6 +152,55 @@ class TestMessageInjector(unittest.TestCase):
                 break
         for row, col, ch, phase in cells:
             self.assertIn(phase, ("glow", "hold", "fade"))
+
+
+class TestSources(unittest.TestCase):
+    def test_hamlet_is_string(self):
+        self.assertIsInstance(HAMLET, str)
+        self.assertIn("To be, or not to be", HAMLET)
+
+    def test_lorem_is_string(self):
+        self.assertIsInstance(LOREM, str)
+        self.assertIn("Lorem ipsum", LOREM)
+
+    def test_get_source_hamlet(self):
+        text = get_source('hamlet')
+        self.assertIn("To be", text)
+
+    def test_get_source_lorem(self):
+        text = get_source('lorem')
+        self.assertIn("dolor sit amet", text)
+
+    def test_get_source_matrix_returns_hex(self):
+        text = get_source('matrix')
+        self.assertIsInstance(text, str)
+        # Hex output is pairs of hex digits separated by spaces
+        parts = text.split()
+        for part in parts[:20]:
+            self.assertEqual(len(part), 2)
+            int(part, 16)  # raises ValueError if not valid hex
+
+    def test_get_source_unknown(self):
+        with self.assertRaises(ValueError):
+            get_source('unknown')
+
+    def test_get_source_matrix_with_file(self):
+        # Read this test file itself as binary hex
+        text = get_source('matrix', path=__file__)
+        parts = text.split()
+        self.assertGreater(len(parts), 10)
+        for part in parts[:20]:
+            self.assertEqual(len(part), 2)
+            int(part, 16)
+
+    def test_get_source_matrix_missing_file(self):
+        with self.assertRaises(FileNotFoundError):
+            get_source('matrix', path='/nonexistent/file.bin')
+
+    def test_read_binary_as_hex(self):
+        result = read_binary_as_hex(Path(__file__), max_bytes=16)
+        parts = result.split()
+        self.assertEqual(len(parts), 16)
 
 
 if __name__ == "__main__":
