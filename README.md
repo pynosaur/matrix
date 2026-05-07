@@ -1,8 +1,19 @@
 # matrix
 
+```
+    ﾀ           ﾎ       0           ﾐ       ﾘ
+    ﾗ       ﾂ   ﾖ       1   ﾃ           ﾕ   ﾜ
+    ﾊ       ﾓ   ﾑ       ﾌ   ﾒ       7   ﾋ   ﾄ
+    ﾆ   9   ﾏ   ﾅ   ﾇ   ﾂ   ﾍ       ﾙ   ﾔ   ﾈ
+    ﾂ   ﾀ   ﾘ   ﾃ   ﾌ   ﾊ   ﾖ   3   ﾎ   ﾑ   ﾓ
+    ﾎ   ﾗ   ﾆ   ﾐ   ﾕ   ﾏ   ﾄ   ﾒ   ﾅ   ﾜ   ﾘ
+    ﾖ   ﾊ   ﾑ   ﾔ   ﾃ   ﾆ   ﾙ   ﾍ   ﾋ   ﾇ   ﾀ
+    ﾍ   ﾌ   ﾋ   ﾜ   ﾈ   ﾓ   ﾅ   ﾗ   ﾂ   ﾐ   ﾕ
+```
+
 Matrix digital rain effect for your terminal.
 
-Version: 0.1.0
+Version: 0.4.1
 
 ## Features
 
@@ -20,10 +31,17 @@ Version: 0.1.0
 # Start the rain
 matrix
 
-# Show help
-matrix -h
+# Embed a message in the rain
+matrix follow the white rabbit
 
-# Show version
+# Embed a file's contents
+matrix -f document.txt
+
+# Rain its own source code
+matrix --self
+
+# Show help / version
+matrix -h
 matrix -v
 ```
 
@@ -32,6 +50,9 @@ matrix -v
 | Key | Action |
 |-----|--------|
 | q / Q / Esc | Quit |
+| r | Reverse rain direction |
+| b | Burst effect |
+| x | Scatter effect |
 
 ## Installation
 
