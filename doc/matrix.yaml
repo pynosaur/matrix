@@ -1,6 +1,6 @@
 NAME: matrix
 FULL_NAME: "Matrix Digital Rain"
-VERSION: "1.0.0"
+VERSION: "1.1.0"
 DESCRIPTION: >
   Matrix digital rain effect for your terminal. Renders authentic falling
   character streams with half-width katakana, depth layers, character mutation,
@@ -11,7 +11,10 @@ USAGE:
   - "matrix wake up neo"
   - "matrix --hamlet"
   - "matrix --lorem"
-  - "matrix -x file.pdf"
+  - "matrix --hex"
+  - "matrix --bin"
+  - "matrix --dec"
+  - "matrix -x <file>"
   - "matrix -f document.txt"
   - "matrix --self"
   - "matrix -h"
@@ -20,7 +23,10 @@ OPTIONS:
   - "-h, --help              Show help message"
   - "-v, --version           Show version information"
   - "-f FILE                 Read FILE and embed its text in the rain"
-  - "-x FILE                 Read any file as raw bytes, rain its hex"
+  - "-x <file>               Rain hex of any file"
+  - "--hex                   Rain with hexadecimal characters only"
+  - "--bin                   Rain with binary characters only"
+  - "--dec                   Rain with decimal characters only"
   - "--self                  Embed matrix's own source code in the rain"
   - "--hamlet                Embed Shakespeare's Hamlet in the rain"
   - "--lorem                 Embed Lorem Ipsum text in the rain"
@@ -28,9 +34,12 @@ OPTIONS:
 EXAMPLES:
   - "matrix                            # Start the digital rain"
   - "matrix follow the white rabbit    # Embed a message"
+  - "matrix --hex                      # Rain hexadecimal"
+  - "matrix --bin                      # Rain binary"
+  - "matrix --dec                      # Rain decimal"
   - "matrix --hamlet                   # Rain Shakespeare's Hamlet"
   - "matrix --lorem                    # Rain Lorem Ipsum"
-  - "matrix -x screenplay.pdf          # Rain hex of any file"
+  - "matrix -x <file>                  # Rain hex of any file"
   - "matrix -f notes.txt               # Embed file contents"
   - "matrix --self                     # Rain your own source code"
 KEYBINDINGS:

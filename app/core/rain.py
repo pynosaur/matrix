@@ -16,11 +16,14 @@ _SYMBOLS = list(":<>{}[]|/\\=+*^~!?@#$%&")
 _LATIN = list("abcdefghijklmnopqrstuvwxyz")
 
 CHARSET = _KATAKANA + _DIGITS + _SYMBOLS + _LATIN
+HEX_CHARSET = list("0123456789abcdef")
+BIN_CHARSET = list("01")
+DEC_CHARSET = list("0123456789")
 
 
-def random_char():
-    """Pick a random character from the Matrix charset."""
-    return random.choice(CHARSET)
+def random_char(charset=None):
+    """Pick a random character from the given charset (default: CHARSET)."""
+    return random.choice(charset or CHARSET)
 
 
 class Stream:
@@ -28,12 +31,13 @@ class Stream:
 
     __slots__ = (
         "col", "speed", "head", "length", "chars", "age",
-        "depth", "mutate_rate", "_tick_acc", "direction",
+        "depth", "mutate_rate", "_tick_acc", "direction", "charset",
     )
 
-    def __init__(self, col, rows, depth=1.0, direction=1):
+    def __init__(self, col, rows, depth=1.0, direction=1, charset=None):
         self.col = col
-        self.depth = depth                    # 0.3–1.0, affects brightness
+        self.charset = charset
+        self.depth = depth                    # 0.3-1.0, affects brightness
         self.speed = random.uniform(0.4, 1.6) * depth
         self.length = random.randint(4, rows)
         self.direction = direction            # 1 = down, -1 = up
@@ -41,7 +45,7 @@ class Stream:
             self.head = random.randint(-rows, -1)   # start above screen
         else:
             self.head = random.randint(rows, 2 * rows)  # start below
-        self.chars = [random_char() for _ in range(self.length)]
+        self.chars = [random_char(charset) for _ in range(self.length)]
         self.age = 0
         self.mutate_rate = random.uniform(0.02, 0.12)
         self._tick_acc = 0.0
@@ -57,7 +61,7 @@ class Stream:
         # Randomly mutate some characters (they flicker in the movie)
         for i in range(self.length):
             if random.random() < self.mutate_rate:
-                self.chars[i] = random_char()
+                self.chars[i] = random_char(self.charset)
 
         # Stream is dead once fully off-screen
         if self.direction == 1:
@@ -89,7 +93,8 @@ class MessageInjector:
     so the word resolves organically from the cascade.
     """
 
-    def __init__(self, text):
+    def __init__(self, text, charset=None):
+        self.charset = charset
         self.words = [w for w in text.split() if w]
         self.word_idx = 0
         self._cooldown = random.randint(20, 50)
@@ -194,12 +199,12 @@ class MessageInjector:
             if cell['state'] == 'falling':
                 # While falling, show random chars (it's still in the rain)
                 if random.random() < 0.6:
-                    ch = random_char()
+                    ch = random_char(self.charset)
                 phase = "glow"
             elif cell['state'] == 'lock':
                 # Shimmer: occasionally show a random char then snap back
                 if random.random() < cell['shimmer_rate']:
-                    ch = random_char()
+                    ch = random_char(self.charset)
                 # Phase based on timer
                 if cell['timer'] > cell['hold_time'] * 0.6:
                     phase = "glow"
@@ -208,7 +213,7 @@ class MessageInjector:
             else:  # wash
                 # Fading out, show random chars more often
                 if random.random() < 0.4 + cell['timer'] * 0.05:
-                    ch = random_char()
+                    ch = random_char(self.charset)
                 phase = "fade"
 
             cells.append((row, col, ch, phase))
@@ -218,12 +223,13 @@ class MessageInjector:
 class Rain:
     """The full Matrix rain simulation across the terminal."""
 
-    def __init__(self, rows, cols, message=None):
+    def __init__(self, rows, cols, message=None, charset=None):
         self.rows = rows
         self.cols = cols
+        self.charset = charset
         self.streams = []
         self._spawn_cooldowns = {}  # col -> ticks until next spawn allowed
-        self.injector = MessageInjector(message) if message else None
+        self.injector = MessageInjector(message, charset) if message else None
         self.direction = 1  # 1 = down, -1 = up
 
     def toggle_direction(self):
@@ -256,7 +262,7 @@ class Rain:
             # Probability of spawning
             if random.random() < 0.015:
                 depth = random.choice([0.3, 0.5, 0.7, 1.0, 1.0, 1.0])
-                s = Stream(col, self.rows, depth, self.direction)
+                s = Stream(col, self.rows, depth, self.direction, self.charset)
                 self.streams.append(s)
                 self._spawn_cooldowns[col] = random.randint(5, 25)
 

@@ -12,7 +12,7 @@ if __name__ == "__main__" and __package__ is None:
     __package__ = "app"
 
 from app import __version__
-from app.core.rain import Rain
+from app.core.rain import BIN_CHARSET, DEC_CHARSET, HEX_CHARSET, Rain
 from app.core.sources import get_source
 from app.core.ui import run_rain
 from app.utils.doc_reader import read_app_doc
@@ -59,6 +59,16 @@ def main():
         return 0
 
     source_flags = {'--hamlet': 'hamlet', '--lorem': 'lorem'}
+    charset_flags = {
+        '--hex': HEX_CHARSET,
+        '--bin': BIN_CHARSET,
+        '--dec': DEC_CHARSET,
+    }
+
+    charset = None
+    if args and args[0] in charset_flags:
+        charset = charset_flags[args[0]]
+        args = args[1:]
 
     if args and args[0] == "--self":
         base = Path(__file__).resolve().parent
@@ -124,7 +134,7 @@ def main():
     try:
         def _run(stdscr):
             rows, cols = stdscr.getmaxyx()
-            rain = Rain(rows, cols, message=message)
+            rain = Rain(rows, cols, message=message, charset=charset)
             run_rain(stdscr, rain)
 
         curses.wrapper(_run)

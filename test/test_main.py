@@ -9,10 +9,16 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+import re
+
+from app import __version__
 from app.core.rain import Rain, Stream, random_char, CHARSET, MessageInjector
 from app.core.sources import (
     HAMLET, LOREM, get_source, read_binary_as_hex,
 )
+from app.utils.doc_reader import read_app_doc
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
 class TestRandomChar(unittest.TestCase):
@@ -201,6 +207,48 @@ class TestSources(unittest.TestCase):
         result = read_binary_as_hex(Path(__file__), max_bytes=16)
         parts = result.split()
         self.assertEqual(len(parts), 16)
+
+
+class TestVersionConsistency(unittest.TestCase):
+    """All version references must match. CI catches drift."""
+
+    def _read_program_version(self):
+        text = (REPO_ROOT / ".program").read_text()
+        for line in text.splitlines():
+            if line.startswith("version:"):
+                return line.split(":", 1)[1].strip()
+        self.fail(".program has no version field")
+
+    def _read_doc_version(self):
+        doc = read_app_doc('matrix')
+        version = doc.get('version')
+        self.assertIsNotNone(version, "doc/matrix.yaml has no VERSION")
+        return version
+
+    def _read_readme_version(self):
+        text = (REPO_ROOT / "README.md").read_text()
+        match = re.search(r'^Version:\s*(.+)$', text, re.MULTILINE)
+        self.assertIsNotNone(match, "README.md has no Version: line")
+        return match.group(1).strip()
+
+    def test_all_versions_match(self):
+        program_v = self._read_program_version()
+        doc_v = self._read_doc_version()
+        readme_v = self._read_readme_version()
+        init_v = __version__
+
+        self.assertEqual(
+            init_v, program_v,
+            f"__init__.py ({init_v}) != .program ({program_v})",
+        )
+        self.assertEqual(
+            init_v, doc_v,
+            f"__init__.py ({init_v}) != doc/matrix.yaml ({doc_v})",
+        )
+        self.assertEqual(
+            init_v, readme_v,
+            f"__init__.py ({init_v}) != README.md ({readme_v})",
+        )
 
 
 if __name__ == "__main__":

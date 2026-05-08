@@ -13,7 +13,7 @@
 
 Matrix digital rain effect for your terminal.
 
-Version: 1.0.0
+Version: 1.1.0
 
 ## Features
 
@@ -33,6 +33,24 @@ matrix
 
 # Embed a message in the rain
 matrix follow the white rabbit
+
+# Rain with hexadecimal characters only
+matrix --hex
+
+# Rain with binary characters only
+matrix --bin
+
+# Rain with decimal characters only
+matrix --dec
+
+# Rain Shakespeare's Hamlet
+matrix --hamlet
+
+# Rain Lorem Ipsum
+matrix --lorem
+
+# Rain hex of any file
+matrix -x <file>
 
 # Embed a file's contents
 matrix -f document.txt
