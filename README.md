@@ -13,7 +13,7 @@
 
 Matrix digital rain effect for your terminal.
 
-Version: 1.1.0
+Version: 1.2.0
 
 ## Features
 
@@ -42,6 +42,15 @@ matrix --bin
 
 # Rain with decimal characters only
 matrix --dec
+
+# Rain with alphabet characters only
+matrix --zed
+
+# Rain with custom characters from a file
+matrix --rain chars.txt
+
+# Custom rain + message (use -- to separate)
+matrix --rain emoji.txt -- wake up neo
 
 # Rain Shakespeare's Hamlet
 matrix --hamlet

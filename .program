@@ -1,5 +1,5 @@
 name: matrix
-version: 1.1.0
+version: 1.2.0
 author: @spacemany2k38
 description: Matrix digital rain effect for your terminal
 type: cli-tool

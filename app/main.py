@@ -12,7 +12,7 @@ if __name__ == "__main__" and __package__ is None:
     __package__ = "app"
 
 from app import __version__
-from app.core.rain import BIN_CHARSET, DEC_CHARSET, HEX_CHARSET, Rain
+from app.core.rain import BIN_CHARSET, DEC_CHARSET, HEX_CHARSET, ZED_CHARSET, Rain
 from app.core.sources import get_source
 from app.core.ui import run_rain
 from app.utils.doc_reader import read_app_doc
@@ -63,12 +63,40 @@ def main():
         '--hex': HEX_CHARSET,
         '--bin': BIN_CHARSET,
         '--dec': DEC_CHARSET,
+        '--zed': ZED_CHARSET,
     }
 
     charset = None
     if args and args[0] in charset_flags:
         charset = charset_flags[args[0]]
         args = args[1:]
+    elif args and args[0] == '--rain':
+        if len(args) < 2:
+            print("matrix: --rain requires a file path", file=sys.stderr)
+            return 1
+        rain_path = Path(args[1])
+        if not rain_path.is_file():
+            print(
+                f"matrix: {args[1]}: No such file", file=sys.stderr,
+            )
+            return 1
+        try:
+            raw = rain_path.read_text(errors='replace')
+            raw = raw.replace('\x00', '')
+            chars = sorted(set(ch for ch in raw if not ch.isspace()))
+            if not chars:
+                print(
+                    "matrix: --rain file has no usable characters",
+                    file=sys.stderr,
+                )
+                return 1
+            charset = chars
+        except OSError as e:
+            print(f"matrix: {args[1]}: {e}", file=sys.stderr)
+            return 1
+        args = args[2:]
+        if args and args[0] == '--':
+            args = args[1:]
 
     if args and args[0] == "--self":
         base = Path(__file__).resolve().parent

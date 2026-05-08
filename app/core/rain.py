@@ -19,6 +19,7 @@ CHARSET = _KATAKANA + _DIGITS + _SYMBOLS + _LATIN
 HEX_CHARSET = list("0123456789abcdef")
 BIN_CHARSET = list("01")
 DEC_CHARSET = list("0123456789")
+ZED_CHARSET = list("abcdefghijklmnopqrstuvwxyz")
 
 
 def random_char(charset=None):
